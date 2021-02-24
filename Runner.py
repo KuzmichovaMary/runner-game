@@ -118,10 +118,10 @@ class Runner:
                 self.update()
                 # self.screen.fill((255, 255, 255, 255))
                 self.clear_canvas()
-                self.menu.display(self.screen)
                 self.horizon.draw(self.screen)
                 self.main_hero.draw(self.screen)
                 self.distance_meter.draw(self.screen)
+                self.menu.display(self.screen)
                 pygame.display.flip()
                 self.clock.tick(FPS)
 
@@ -136,10 +136,8 @@ class Runner:
         if self.playing:
             self.runningTime += deltaTime
 
-            visible_obstacles_indexes = list(filter(lambda x: self.horizon.obstacles_indexes[x] == 1,
-                                                    self.horizon.obstacles_indexes.keys()))
-            for obstacle in visible_obstacles_indexes:
-                if pygame.sprite.collide_mask(self.main_hero, OBSTACLES_NUM[obstacle]):
+            for obstacle in self.horizon.obstacles:
+                if pygame.sprite.collide_mask(self.main_hero, obstacle):
                     if self.main_hero.ducked:
                         self.main_hero.image = self.main_hero.frames[self.main_hero.states[CRASHED_D][frames][0]]
                     else:

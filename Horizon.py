@@ -26,6 +26,12 @@ OBSTACLES_IMAGES = {"CACTUS_BIG_LARGE": load_image("cactus_biggest.png"),
 CLOUD_PATH = "cloud.png"
 
 
+TREE_PERMUTATIONS_2 = list(permutations(["TREE_SMALL_3", "TREE_SMALL_2", "TREE_SMALL"], 2))
+TREE_PERMUTATIONS_3 = list(permutations(["TREE_SMALL_3", "TREE_SMALL_2", "TREE_SMALL"], 3))
+CACTUS_PERMUTATIONS_2 = list(permutations(range(6), 2))
+CACTUS_PERMUTATIONS_3 = list(permutations(range(6), 3))
+
+
 class Cloud:
     def __init__(self, image_path, x, y):
         self.image = load_image(image_path)
@@ -60,9 +66,6 @@ class Obstacle:
         self.animated = animated
         self.counter = 0
         self.iters = 0
-        self.multiple_speed = 0
-        self.min_gap = 0
-        self.min_speed = 0
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -83,20 +86,22 @@ class Obstacle:
 
 
 class Pterodactyl(Obstacle):
+    multiple_speed = 999
+    min_gap = 150
+    min_speed = 8.5
+
     def __init__(self, x, y):
         super().__init__(OBSTACLES_IMAGES["PTERODACTYL"],
                          x, y, animated=True)
-        self.multiple_speed = 999
-        self.min_gap = 8.5
-        self.min_speed = 150
 
 
 class CactusSmall(Obstacle):
-    def __init__(self, image, x, y):
+    multiple_speed = 7
+    min_gap = 120
+    min_speed = 0
+
+    def __init__(self, x, y, image=choice(OBSTACLES_IMAGES["CACTUS_SMALL"])):
         super().__init__(image, x, y)
-        self.multiple_speed = 7
-        self.min_gap = 120
-        self.min_speed = 0
 
 
 class CactusBig(Obstacle):
@@ -104,30 +109,33 @@ class CactusBig(Obstacle):
     min_gap = 150
     min_speed = 8
 
-    def __init__(self, image, x, y):
-        super().__init__(image, x, y)
-        self.multiple_speed = 1000
-        self.min_gap = 150
-        self.min_speed = 8
+    def __init__(self, x, y):
+        super().__init__(OBSTACLES_IMAGES[choice(["CACTUS_BIG_MEDIUM", "CACTUS_BIG_LARGE", "CACTUS_BIG_SMALL"])], x, y)
 
 
 class Tree(Obstacle):
-    def __init__(self, image, x, y):
-        super().__init__(image, x, y)
-        self.multiple_speed = 1000
-        self.min_gap = 150
-        self.min_speed = 8
+    multiple_speed = 1000
+    min_gap = 150
+    min_speed = 8
+
+    def __init__(self, x, y):
+        super().__init__(OBSTACLES_IMAGES[choice(["TREE_BIG", "TREE_BIG_2", "TREE_BIG_3"])], x, y)
 
 
 class TreeSmall(Obstacle):
-    def __init__(self, image, x, y):
+    multiple_speed = 6
+    min_gap = 120
+    min_speed = 0
+
+    def __init__(self, x, y, image=OBSTACLES_IMAGES[choice(["TREE_SMALL_2", "TREE_SMALL_3", "TREE_SMALL"])]):
         super().__init__(image, x, y)
-        self.multiple_speed = 6
-        self.min_gap = 120
-        self.min_speed = 0
 
 
 class MultipleObstacle:
+    multiple_speed = 6
+    min_gap = 150
+    min_speed = 6
+
     def __init__(self, n, x, bottom, obstacles, space):
         w = 0
         h = 0
@@ -140,11 +148,8 @@ class MultipleObstacle:
         self.obstacle_rect = pygame.Rect(0, 0, w, h)
         for i in range(n):
             x = w * i + space * i
-            self.surface.blit(obstacles[i].image, obstacles[i].rect.move(x, 0))
+            self.surface.blit(obstacles[i].image, self.obstacle_rect.move(x, 0))
         self.mask = pygame.mask.from_surface(self.surface)
-        self.multiple_speed = 6
-        self.min_gap = 150
-        self.min_speed = 6
         self.out = False
         self.space = space
         self.n = n
@@ -152,15 +157,52 @@ class MultipleObstacle:
         self.h = h
 
     def draw(self, screen):
-        for i in range(self.n):
-            x = self.w * i + self.space * i
-            self.surface.blit(obstacles[i].image, self.obstacle_rect.move(x, 0))
         screen.blit(self.surface, self.rect)
 
     def update(self, delta_time, speed):
         self.rect.left -= round(DELTA_TIME_CONST * delta_time * speed)
         if self.rect.right <= 0:
             self.out = True
+
+
+class MultipleCactusSmall2(MultipleObstacle):
+    multiple_speed = 10000
+    min_gap = 120
+    min_speed = 6
+
+    def __init__(self, x, bottom):
+        obstacles = [CactusSmall(0, 0, OBSTACLES_IMAGES["CACTUS_SMALL"][i]) for i in choice(CACTUS_PERMUTATIONS_2)]
+        super().__init__(2, x, bottom, obstacles, 5)
+
+
+class MultipleCactusSmall3(MultipleObstacle):
+    multiple_speed = 10000
+    min_gap = 120
+    min_speed = 6
+
+    def __init__(self, x, bottom):
+        obstacles = [CactusSmall(0, 0, OBSTACLES_IMAGES["CACTUS_SMALL"][i]) for i in choice(CACTUS_PERMUTATIONS_3)]
+        super().__init__(3, x, bottom, obstacles, 3)
+
+
+class MultipleTreeSmall2(MultipleObstacle):
+    multiple_speed = 10000
+    min_gap = 120
+    min_speed = 6
+
+    def __init__(self, x, bottom):
+        obstacles = [TreeSmall(0, 0, OBSTACLES_IMAGES[i]) for i in choice(TREE_PERMUTATIONS_2)]
+        super().__init__(2, x, bottom, obstacles, -3)
+
+
+class MultipleTreeSmall3(MultipleObstacle):
+    multiple_speed = 10000
+    min_gap = 120
+    min_speed = 6
+
+    def __init__(self, x, bottom):
+        obstacles = [TreeSmall(0, 0, OBSTACLES_IMAGES[i]) for i in choice(TREE_PERMUTATIONS_3)]
+        super().__init__(3, x, bottom, obstacles, -5)
 
 
 class HorizonLine:
@@ -219,67 +261,20 @@ class ParallaxHorizonLine:
         # # print(self.first_rect.right, self.second_rect.left)
 
 
-OBSTACLES_NUM = {}
-
-for i in range(6):
-    OBSTACLES_NUM[i] = CactusSmall(OBSTACLES_IMAGES["CACTUS_SMALL"][i],
-                                   0, HEIGHT - CACTUS_BOTTOM_HEIGHT)
-
-OBSTACLES_NUM[6] = CactusBig(OBSTACLES_IMAGES["CACTUS_BIG_MEDIUM"],
-                             0, HEIGHT - CACTUS_BOTTOM_HEIGHT)
-OBSTACLES_NUM[7] = CactusBig(OBSTACLES_IMAGES["CACTUS_BIG_SMALL"],
-                             0, HEIGHT - CACTUS_BOTTOM_HEIGHT)
-OBSTACLES_NUM[8] = CactusBig(OBSTACLES_IMAGES["CACTUS_BIG_LARGE"],
-                             0, HEIGHT - CACTUS_BOTTOM_HEIGHT)
-OBSTACLES_NUM[9] = Pterodactyl(0, HEIGHT - GROUND_HEIGHT - 150)
-OBSTACLES_NUM[10] = Pterodactyl(0, HEIGHT - GROUND_HEIGHT - 50)
-OBSTACLES_NUM[11] = Pterodactyl(0, HEIGHT - GROUND_HEIGHT - 5)
-
-for i, permutation in enumerate(permutations((0, 1, 2, 3, 4, 5), 3)):
-    d = {}
-    for j in range(6):
-        d[j] = CactusSmall(OBSTACLES_IMAGES["CACTUS_SMALL"][j], 0, HEIGHT - CACTUS_BOTTOM_HEIGHT)
-    obstacles = [d[k] for k in permutation]
-    OBSTACLES_NUM[i + 12] = MultipleObstacle(3, 0, HEIGHT - CACTUS_BOTTOM_HEIGHT, obstacles, 3)
-
-for i, permutation in enumerate(permutations((0, 1, 2, 3, 4, 5), 2)):
-    d = {}
-    for j in range(6):
-        d[j] = CactusSmall(OBSTACLES_IMAGES["CACTUS_SMALL"][j], 0, HEIGHT - CACTUS_BOTTOM_HEIGHT)
-    obstacles = [d[k] for k in permutation]
-    OBSTACLES_NUM[i + 12 + 6 * 5 * 4] = MultipleObstacle(2, 0, HEIGHT - CACTUS_BOTTOM_HEIGHT, obstacles, 3)
-
-OBSTACLES_NUM[12 + 120 + 30] = TreeSmall(OBSTACLES_IMAGES["TREE_SMALL"],
-                                    0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA)
-OBSTACLES_NUM[13 + 120 + 30] = TreeSmall(OBSTACLES_IMAGES["TREE_SMALL_2"],
-                                    0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA)
-OBSTACLES_NUM[14 + 120 + 30] = TreeSmall(OBSTACLES_IMAGES["TREE_SMALL_3"],
-                                    0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA)
-OBSTACLES_NUM[15 + 120 + 30] = Tree(OBSTACLES_IMAGES["TREE_BIG"],
-                               0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA)
-OBSTACLES_NUM[16 + 120 + 30] = Tree(OBSTACLES_IMAGES["TREE_BIG_2"],
-                               0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA)
-OBSTACLES_NUM[17 + 120 + 30] = Tree(OBSTACLES_IMAGES["TREE_BIG_3"],
-                               0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA)
-
-for i, permutation in enumerate(permutations((0, 1, 2))):
-    d = {0: TreeSmall(OBSTACLES_IMAGES["TREE_SMALL"], 0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA),
-         1: TreeSmall(OBSTACLES_IMAGES["TREE_SMALL_2"], 0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA),
-         2: TreeSmall(OBSTACLES_IMAGES["TREE_SMALL_3"], 0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA)}
-    OBSTACLES_NUM[i + 18 + 120 + 30] = MultipleObstacle(3, 0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA,
-                                                   [d[permutation[0]], d[permutation[1]], d[permutation[2]]], -10)
-
-for i, permutation in enumerate(permutations((0, 1, 2), 2)):
-    d = {0: TreeSmall(OBSTACLES_IMAGES["TREE_SMALL"], 0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA),
-         1: TreeSmall(OBSTACLES_IMAGES["TREE_SMALL_2"], 0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA),
-         2: TreeSmall(OBSTACLES_IMAGES["TREE_SMALL_3"], 0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA)}
-    OBSTACLES_NUM[i + 18 + 120 + 6 + 30] = MultipleObstacle(2, 0, HEIGHT - CACTUS_BOTTOM_HEIGHT - DELTA,
-                                                   [d[permutation[0]], d[permutation[1]]], -5)
+OBSTACLES_NUM = {0: CactusSmall,
+                 1: CactusBig,
+                 2: Pterodactyl,
+                 3: MultipleCactusSmall2,
+                 4: MultipleCactusSmall3,
+                 5: TreeSmall,
+                 6: Tree,
+                 7: MultipleTreeSmall2,
+                 8: MultipleTreeSmall3}
 
 
 class Horizon:
     def __init__(self, indexes):
-        self.obstacles_indexes = {i: 0 for i in range(*indexes)}
+        self.obstacles = []
         self.clouds = []
         self.horizon_line_1 = HorizonLine("horizon.png", 0, HEIGHT - GROUND_HEIGHT)
         # self.add_cloud()
@@ -288,28 +283,22 @@ class Horizon:
         self.distance = 0
         self.delta = 0
         self.delta_2 = 1
-        self.last_added_obstacle_index = 0
-        self.visible_obstacles_indexes = []
-        self.invisible_obstacles_indexes = []
 
     def update(self, delta_time, speed):
         self.running_time += delta_time
         self.distance += speed * delta_time * DELTA_TIME_CONST
         self.horizon_line_1.update(delta_time, speed)
-        self.visible_obstacles_indexes = list(filter(lambda x: self.obstacles_indexes[x] == 1,
-                                                     self.obstacles_indexes.keys()))
-        self.invisible_obstacles_indexes = list(set(self.obstacles_indexes.keys()) - set(self.visible_obstacles_indexes))
-        if self.visible_obstacles_indexes:
-            for obstacle_index in self.visible_obstacles_indexes:
-                OBSTACLES_NUM[obstacle_index].update(delta_time, speed)
-                if OBSTACLES_NUM[obstacle_index].out:
-                    self.obstacles_indexes[obstacle_index] = 0
+        if self.obstacles:
+            for obstacle in self.obstacles:
+                obstacle.update(delta_time, speed)
+                if obstacle.out:
+                    self.obstacles.remove(obstacle)
         for cloud in self.clouds:
             cloud.update(delta_time, speed)
             if cloud.out:
                 self.clouds.remove(cloud)
-        if self.obstacles_indexes:
-            gap = WIDTH - OBSTACLES_NUM[self.last_added_obstacle_index].rect.right
+        if self.obstacles:
+            gap = WIDTH - self.obstacles[-1].rect.right
             if gap > MIN_GAP:
                 self.add_obstacle(gap, speed)
         else:
@@ -321,19 +310,18 @@ class Horizon:
         self.clouds.append(cloud)
 
     def add_obstacle(self, gap, speed):
-        obstacle = choice(self.invisible_obstacles_indexes)
-        if speed < OBSTACLES_NUM[obstacle].min_speed or gap < OBSTACLES_NUM[obstacle].min_gap:
+        obstacle_index = randint(*self.indexes)
+        if speed < OBSTACLES_NUM[obstacle_index].min_speed or gap < OBSTACLES_NUM[obstacle_index].min_gap:
             self.add_obstacle(gap, speed)
         else:
             add = 0
-            if self.visible_obstacles_indexes:
+            if self.obstacles:
                 add = self.get_gap(speed)
-            OBSTACLES_NUM[obstacle].rect.left = WIDTH + add
-            self.obstacles_indexes[obstacle] = 1
-            self.last_added_obstacle_index = obstacle
+            obstacle = OBSTACLES_NUM[obstacle_index](WIDTH + add, HEIGHT - CACTUS_BOTTOM_HEIGHT - self.delta)
+            self.obstacles.append(obstacle)
 
     def get_gap(self, speed):
-        min_gap = round(OBSTACLES_NUM[self.last_added_obstacle_index].rect.w * speed)
+        min_gap = round(self.obstacles[-1].rect.w * speed)
         max_gap = round(min_gap * MAX_GAP_COEFFICIENT)
         return randint(min_gap, max_gap)
 
@@ -341,11 +329,11 @@ class Horizon:
         for cloud in self.clouds:
             cloud.draw(screen)
         self.horizon_line_1.draw(screen)
-        for obstacle in self.visible_obstacles_indexes:
-            OBSTACLES_NUM[obstacle].draw(screen)
+        for obstacle in self.obstacles:
+            obstacle.draw(screen)
 
     def restart(self):
-        self.obstacles_indexes = {i: 0 for i in range(*self.indexes)}
+        self.obstacles = []
         self.clouds = []
         self.horizon_line_1 = HorizonLine("horizon.png", 0, HEIGHT - GROUND_HEIGHT)
         self.running_time = 0
@@ -354,7 +342,7 @@ class Horizon:
 
 class DinoHorizon(Horizon):
     def __init__(self):
-        super().__init__((0, 162))
+        super().__init__((0, 4))
         self.add_cloud()
 
     def update(self, delta_time, speed):
@@ -370,7 +358,7 @@ class DinoHorizon(Horizon):
 
 class DeerHorizon(Horizon):
     def __init__(self):
-        super().__init__((162, 5 + 18 + 120 + 6 + 30))
+        super().__init__((5, 8))
         self.delta = 10
         self.horizon_line_1 = HorizonLine("forest/001.png", 0, HEIGHT - GROUND_HEIGHT)
         self.horizon_line_1.first_rect.bottom = HEIGHT
@@ -384,8 +372,6 @@ class DeerHorizon(Horizon):
         self.horizon_line_4 = ParallaxHorizonLine("forest/sky.png", 0, HEIGHT, 0.06)
         self.horizon_line_4.first_rect.bottom = HEIGHT
         self.horizon_line_4.second_rect.bottom = HEIGHT
-        self.indexes = [3, 4]
-        self.delta_2 = 1.5
 
     def draw(self, screen):
         self.horizon_line_4.draw(screen)
