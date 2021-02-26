@@ -11,19 +11,21 @@ GAME_OVER = False
 FPS = 60
 width, height = 800, 400
 
-OBSTACLES_IMAGES = {"CACTUS_BIG_LARGE": load_image("cactus_biggest.png"),
-                    "CACTUS_BIG_MEDIUM": load_image("cactus_two.png"),
-                    "CACTUS_BIG_SMALL": load_image("cactus_big_one.png"),
-                    "CACTUS_SMALL": load_sprite_sheet(load_image("cactus_small.png"), 6, 1),
-                    "PTERODACTYL": load_sprite_sheet(load_image("bird.png"), 2, 1),
-                    "TREE_BIG": load_image("pine_tree_r_0.png"),
-                    "TREE_BIG_2": load_image("pine_tree_2_r_0.png"),
-                    "TREE_BIG_3": load_image("bushes_r_0.png"),
-                    "TREE_SMALL": load_image("tree_s_r_0.png"),
-                    "TREE_SMALL_2": load_image("tree_s_1_r_0.png"),
-                    "TREE_SMALL_3": load_image("tree_s_2_r_0.png")}
+# _r_0
 
-CLOUD_PATH = "cloud.png"
+OBSTACLES_IMAGES = {"CACTUS_BIG_LARGE": load_image("obstacles/cactus_biggest.png"),
+                    "CACTUS_BIG_MEDIUM": load_image("obstacles/cactus_two.png"),
+                    "CACTUS_BIG_SMALL": load_image("obstacles/cactus_big_one.png"),
+                    "CACTUS_SMALL": load_sprite_sheet(load_image("obstacles/cactus_small.png"), 6, 1),
+                    "PTERODACTYL": load_sprite_sheet(load_image("obstacles/bird.png"), 2, 1),
+                    "TREE_BIG": load_image("obstacles/pine_tree_r_0.png"),
+                    "TREE_BIG_2": load_image("obstacles/pine_tree_2_r_0.png"),
+                    "TREE_BIG_3": load_image("obstacles/bushes_r_0.png"),
+                    "TREE_SMALL": load_image("obstacles/tree_s_r_0.png"),
+                    "TREE_SMALL_2": load_image("obstacles/tree_s_1_r_0.png"),
+                    "TREE_SMALL_3": load_image("obstacles/tree_s_2_r_0.png")}
+
+CLOUD_PATH = "background/cloud.png"
 
 
 TREE_PERMUTATIONS_2 = list(permutations(["TREE_SMALL_3", "TREE_SMALL_2", "TREE_SMALL"], 2))
@@ -97,7 +99,7 @@ class Pterodactyl(Obstacle):
 
 class CactusSmall(Obstacle):
     multiple_speed = 7
-    min_gap = 120
+    min_gap = 99
     min_speed = 0
 
     def __init__(self, x, y, image=choice(OBSTACLES_IMAGES["CACTUS_SMALL"])):
@@ -124,7 +126,7 @@ class Tree(Obstacle):
 
 class TreeSmall(Obstacle):
     multiple_speed = 6
-    min_gap = 120
+    min_gap = 99
     min_speed = 0
 
     def __init__(self, x, y, image=OBSTACLES_IMAGES[choice(["TREE_SMALL_2", "TREE_SMALL_3", "TREE_SMALL"])]):
@@ -136,30 +138,50 @@ class MultipleObstacle:
     min_gap = 150
     min_speed = 6
 
-    def __init__(self, n, x, bottom, obstacles, space):
+    def __init__(self, n, x, bottom, obstacles, space, ys_range=0, animated=False):
         w = 0
         h = 0
         for obstacle in obstacles:
             w = max(w, obstacle.rect.w)
             h = max(h, obstacle.rect.h)
+        h += ys_range
         self.surface = pygame.Surface((w * n + space * (n - 1), h), pygame.SRCALPHA)
         self.rect = pygame.Rect(x, bottom - h, w * n + space * (n - 1), h)
         self.obstacles = obstacles
         self.obstacle_rect = pygame.Rect(0, 0, w, h)
         for i in range(n):
             x = w * i + space * i
-            self.surface.blit(obstacles[i].image, self.obstacle_rect.move(x, 0))
+            y = randint(0, ys_range)
+            self.obstacles[i].y = y
+            self.surface.blit(obstacles[i].image, self.obstacle_rect.move(x, y))
         self.mask = pygame.mask.from_surface(self.surface)
         self.out = False
         self.space = space
         self.n = n
         self.w = w
         self.h = h
+        self.animated = animated
+        self.iters = 0
+        self.counter = 0
 
     def draw(self, screen):
         screen.blit(self.surface, self.rect)
 
     def update(self, delta_time, speed):
+        if self.animated:
+            if self.iters % 10 == 0:
+                self.counter += 1
+                self.counter %= 2
+                self.iters %= 10
+                self.surface.fill((255, 255, 255, 0))
+                for i in range(self.n):
+                    x = self.w * i + self.space * i
+                    y = self.obstacles[i].y
+                    if i % randint(1, 3) == 0:
+                        self.surface.blit(self.obstacles[i].frames[self.counter], self.obstacle_rect.move(x, y))
+                    else:
+                        self.surface.blit(self.obstacles[i].frames[abs(self.counter - 1)], self.obstacle_rect.move(x, y))
+            self.iters += 1
         self.rect.left -= round(DELTA_TIME_CONST * delta_time * speed)
         if self.rect.right <= 0:
             self.out = True
@@ -203,6 +225,17 @@ class MultipleTreeSmall3(MultipleObstacle):
     def __init__(self, x, bottom):
         obstacles = [TreeSmall(0, 0, OBSTACLES_IMAGES[i]) for i in choice(TREE_PERMUTATIONS_3)]
         super().__init__(3, x, bottom, obstacles, -5)
+
+
+class MultipleBirds(MultipleObstacle):
+    multiple_speed = 500
+    min_gap = 120
+    min_speed = 5
+
+    def __init__(self, x, bottom):
+        n = randint(1, 7)
+        obstacles = [Pterodactyl(0, 0) for i in range(n)]
+        super().__init__(n, x, bottom, obstacles, 1, 50, animated=True)
 
 
 class HorizonLine:
@@ -266,17 +299,18 @@ OBSTACLES_NUM = {0: CactusSmall,
                  2: Pterodactyl,
                  3: MultipleCactusSmall2,
                  4: MultipleCactusSmall3,
-                 5: TreeSmall,
-                 6: Tree,
-                 7: MultipleTreeSmall2,
-                 8: MultipleTreeSmall3}
+                 5: MultipleBirds,
+                 6: TreeSmall,
+                 7: Tree,
+                 8: MultipleTreeSmall2,
+                 9: MultipleTreeSmall3}
 
 
 class Horizon:
     def __init__(self, indexes):
         self.obstacles = []
         self.clouds = []
-        self.horizon_line_1 = HorizonLine("horizon.png", 0, HEIGHT - GROUND_HEIGHT)
+        self.horizon_line_1 = HorizonLine("background/horizon.png", 0, HEIGHT - GROUND_HEIGHT)
         # self.add_cloud()
         self.indexes = indexes
         self.running_time = 0
@@ -300,49 +334,53 @@ class Horizon:
         if self.obstacles:
             gap = WIDTH - self.obstacles[-1].rect.right
             if gap > MIN_GAP:
-                self.add_obstacle(gap, speed)
+                self.add_obstacle(speed)
         else:
             if self.distance > 2000:
-                self.add_obstacle(MIN_GAP + 2, speed)
+                self.add_obstacle(speed)
 
     def add_cloud(self):
         cloud = Cloud(CLOUD_PATH, WIDTH, randint(20, 180))
         self.clouds.append(cloud)
 
-    def add_obstacle(self, gap, speed):
+    def add_obstacle(self, speed):
         obstacle_index = randint(*self.indexes)
-        if speed < OBSTACLES_NUM[obstacle_index].min_speed or gap < OBSTACLES_NUM[obstacle_index].min_gap:
-            self.add_obstacle(gap, speed)
+        if speed < OBSTACLES_NUM[obstacle_index].min_speed:
+            self.add_obstacle(speed)
         else:
             add = 0
             if self.obstacles:
                 add = self.get_gap(speed)
-            obstacle = OBSTACLES_NUM[obstacle_index](WIDTH + add, HEIGHT - CACTUS_BOTTOM_HEIGHT - self.delta)
+            if obstacle_index == 2:
+                obstacle = OBSTACLES_NUM[obstacle_index](WIDTH + add, HEIGHT - choice([50, 30, 110]))
+            elif obstacle_index == 5:
+                obstacle = OBSTACLES_NUM[obstacle_index](WIDTH + add, HEIGHT - 110)
+            else:
+                obstacle = OBSTACLES_NUM[obstacle_index](WIDTH + add, HEIGHT - CACTUS_BOTTOM_HEIGHT - self.delta)
             self.obstacles.append(obstacle)
 
     def get_gap(self, speed):
-        min_gap = round(self.obstacles[-1].rect.w * speed)
-        max_gap = round(min_gap * MAX_GAP_COEFFICIENT)
+        min_gap = round(speed)
+        max_gap = round(speed * MAX_GAP_COEFFICIENT)
         return randint(min_gap, max_gap)
 
     def draw(self, screen):
         for cloud in self.clouds:
             cloud.draw(screen)
-        self.horizon_line_1.draw(screen)
         for obstacle in self.obstacles:
             obstacle.draw(screen)
 
     def restart(self):
         self.obstacles = []
         self.clouds = []
-        self.horizon_line_1 = HorizonLine("horizon.png", 0, HEIGHT - GROUND_HEIGHT)
+        self.horizon_line_1 = HorizonLine("background/horizon.png", 0, HEIGHT - GROUND_HEIGHT)
         self.running_time = 0
         self.distance = 0
 
 
 class DinoHorizon(Horizon):
     def __init__(self):
-        super().__init__((0, 4))
+        super().__init__((0, 5))
         self.add_cloud()
 
     def update(self, delta_time, speed):
@@ -351,6 +389,10 @@ class DinoHorizon(Horizon):
         if len(self.clouds) < MIN_CLOUDS and WIDTH - self.clouds[-1].rect.right > randint(50, 300):
             self.add_cloud()
 
+    def draw(self, screen):
+        self.horizon_line_1.draw(screen)
+        super().draw(screen)
+
     def restart(self):
         super().restart()
         self.add_cloud()
@@ -358,44 +400,53 @@ class DinoHorizon(Horizon):
 
 class DeerHorizon(Horizon):
     def __init__(self):
-        super().__init__((5, 8))
+        super().__init__((6, 9))
+        self.horizon_line_0 = HorizonLine("background/ground_1.png", 0, HEIGHT - GROUND_HEIGHT)
         self.delta = 10
-        self.horizon_line_1 = HorizonLine("forest/001.png", 0, HEIGHT - GROUND_HEIGHT)
+        self.horizon_line_1 = ParallaxHorizonLine("background/001.png", 0, HEIGHT - GROUND_HEIGHT, 0.2)
         self.horizon_line_1.first_rect.bottom = HEIGHT
         self.horizon_line_1.second_rect.bottom = HEIGHT
-        self.horizon_line_2 = ParallaxHorizonLine("forest/002.png", 0, HEIGHT, 0.2)
+        self.horizon_line_2 = ParallaxHorizonLine("background/002.png", 0, HEIGHT, 0.06)
         self.horizon_line_2.first_rect.bottom = HEIGHT
         self.horizon_line_2.second_rect.bottom = HEIGHT
-        self.horizon_line_3 = ParallaxHorizonLine("forest/clouds.png", 0, HEIGHT, 0.06)
+        self.horizon_line_3 = ParallaxHorizonLine("background/clouds_1.png", 0, HEIGHT, 0.06)
         self.horizon_line_3.first_rect.bottom = HEIGHT
         self.horizon_line_3.second_rect.bottom = HEIGHT
-        self.horizon_line_4 = ParallaxHorizonLine("forest/sky.png", 0, HEIGHT, 0.06)
+        self.horizon_line_4 = ParallaxHorizonLine("background/sky_1.png", 0, HEIGHT, 0.006)
         self.horizon_line_4.first_rect.bottom = HEIGHT
         self.horizon_line_4.second_rect.bottom = HEIGHT
 
     def draw(self, screen):
         self.horizon_line_4.draw(screen)
-        self.horizon_line_3.draw(screen)
+        # self.horizon_line_3.draw(screen)
         self.horizon_line_2.draw(screen)
+        self.horizon_line_1.draw(screen)
+        self.horizon_line_0.draw(screen)
         super().draw(screen)
 
     def update(self, delta_time, speed):
-        self.horizon_line_2.update(delta_time, speed)
+        self.horizon_line_4.update(delta_time, speed)
         self.horizon_line_3.update(delta_time, speed)
+        self.horizon_line_2.update(delta_time, speed)
+        self.horizon_line_1.update(delta_time, speed)
+        self.horizon_line_0.update(delta_time, speed)
         super().update(delta_time, speed)
 
     def restart(self):
         super().restart()
-        self.horizon_line_1 = HorizonLine("forest/001.png", 0, HEIGHT - GROUND_HEIGHT)
+        self.horizon_line_0 = HorizonLine("background/ground_1.png", 0, HEIGHT - GROUND_HEIGHT)
+        self.horizon_line_0.first_rect.bottom = HEIGHT
+        self.horizon_line_0.second_rect.bottom = HEIGHT
+        self.horizon_line_1 = ParallaxHorizonLine("background/001.png", 0, HEIGHT - GROUND_HEIGHT, 0.23)
         self.horizon_line_1.first_rect.bottom = HEIGHT
         self.horizon_line_1.second_rect.bottom = HEIGHT
-        self.horizon_line_2 = ParallaxHorizonLine("forest/002.png", 0, HEIGHT, 0.2)
+        self.horizon_line_2 = ParallaxHorizonLine("background/002.png", 0, HEIGHT, 0.07)
         self.horizon_line_2.first_rect.bottom = HEIGHT
         self.horizon_line_2.second_rect.bottom = HEIGHT
-        self.horizon_line_3 = ParallaxHorizonLine("forest/clouds.png", 0, HEIGHT, 0.06)
+        self.horizon_line_3 = ParallaxHorizonLine("background/clouds_1.png", 0, HEIGHT, 0.055)
         self.horizon_line_3.first_rect.bottom = HEIGHT
         self.horizon_line_3.second_rect.bottom = HEIGHT
-        self.horizon_line_4 = ParallaxHorizonLine("forest/sky.png", 0, HEIGHT, 0.06)
+        self.horizon_line_4 = ParallaxHorizonLine("background/sky_1.png", 0, HEIGHT, 0.006)
         self.horizon_line_4.first_rect.bottom = HEIGHT
         self.horizon_line_4.second_rect.bottom = HEIGHT
 

@@ -3,10 +3,10 @@ from basic_functions import load_image
 from constants import HIGH_SCORE_TOP
 
 
-class Button:
+class ButtonBase:
     def __init__(self, x, y, job_on_click, active=True, color=(255, 200, 10, 0), icon_path_1="", icon_path_2=""):
-        self.default_image = load_image(icon_path_1)
-        self.clicked_image = load_image(icon_path_2)
+        self.default_image = load_image("icons/" + icon_path_1)
+        self.clicked_image = load_image("icons/" + icon_path_2)
         self.image = self.default_image
         self.rect = pygame.Rect(0, 0, self.image.get_rect().w, self.image.get_rect().h).move(x, y)
         self.color = color
@@ -15,16 +15,14 @@ class Button:
         self.clicked = False
         self.job = job_on_click
         self.active = active
+        self.images = [self.default_image, self.clicked_image]
+        self.curr_index = 0
 
     def update(self):
         if self.active:
             mouse_on_widget = self.rect.collidepoint(pygame.mouse.get_pos())
-            if mouse_on_widget and not self.clicked:
+            if mouse_on_widget:
                 self.clicked = True
-                self.change_icon()
-                self.job()
-            elif mouse_on_widget and self.clicked:
-                self.clicked = False
                 self.change_icon()
                 self.job()
 
@@ -33,6 +31,12 @@ class Button:
 
     def change_icon(self):
         pass
+
+
+class Button(ButtonBase):
+    def change_icon(self):
+        self.curr_index = abs(self.curr_index - 1)
+        self.image = self.images[self.curr_index]
 
 
 class Menu:
@@ -49,7 +53,7 @@ class Menu:
         self.element_height = element_height
         self.visible = False
         self.color = color
-        self.open_close_btn = Button(x, y, job_on_click=self.change_menu_visibility,
+        self.open_close_btn = ButtonBase(x, y, job_on_click=self.change_menu_visibility,
                                      icon_path_1="menu.png", icon_path_2="x.png")
 
     def display(self, screen):

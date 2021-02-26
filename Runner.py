@@ -3,7 +3,7 @@ import sys
 import pygame
 from constants import *
 pygame.init()
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.NOFRAME)
+SCREEN = pygame.display.set_mode((WIDTH, HEIGHT), pygame.NOFRAME, pygame.SRCALPHA)
 from pygame.locals import *
 from basic_functions import load_image, load_sprite_sheet
 from time import time
@@ -13,9 +13,9 @@ from DistanceMeter import DistanceMeter
 from GUI_pygame import Button, Menu
 from MainMenu import MainMenu
 
-jump_sound = pygame.mixer.Sound('data/jump.wav')
-crashed_sound = pygame.mixer.Sound('data/crashed.wav')
-achievement_sound = pygame.mixer.Sound('data/check_point.wav')
+jump_sound = pygame.mixer.Sound('data/sounds/jump.wav')
+crashed_sound = pygame.mixer.Sound('data/sounds/crashed.wav')
+achievement_sound = pygame.mixer.Sound('data/sounds/check_point.wav')
 
 
 GAME_OVER = False
@@ -30,10 +30,12 @@ class Runner:
         self.crashed = False
         self.time = time()
         self.currentSpeed = SPEED
+        self.paused = False
 
         pygame.display.set_caption('Google Trex')
         self.screen = SCREEN
         self.screen.fill((255, 255, 255, 255))
+        self.music_on = True
 
         # DeerHorizon contains clouds, obstacles and the ground.
         # self.horizon = DeerHorizon(self.screen)
@@ -41,7 +43,11 @@ class Runner:
                             active=False)
         menu_btn_2 = Button(0, 0, job_on_click=self.to_main_menu,
                             icon_path_1="home.png", icon_path_2="home.png", active=False)
-        self.menu = Menu(HIGH_SCORE_TOP - 8, HIGH_SCORE_TOP - 8, [menu_btn_1, menu_btn_2])
+        menu_btn_3 = Button(0, 0, job_on_click=self.turn_music_off,
+                            icon_path_1="volume-2.png", icon_path_2="volume-x.png")
+        self.pause_play_btn = Button(HIGH_SCORE_TOP + 89, HIGH_SCORE_TOP - 8, job_on_click=self.pause_play, icon_path_1="play.png",
+                                     icon_path_2="pause.png")
+        self.menu = Menu(HIGH_SCORE_TOP - 8, HIGH_SCORE_TOP - 8, [menu_btn_1, menu_btn_2, menu_btn_3])
         self.main_menu = MainMenu()
         self.runningTime = 0
         self.playing = True
@@ -54,6 +60,12 @@ class Runner:
                       "dino": {"horizon": DinoHorizon(),
                                "hero": TRex(10, HEIGHT - DINO_RUNNING_HEIGHT - 10),
                                "distance_meter": DistanceMeter()}}
+
+    def turn_music_off(self):
+        self.music_on = abs(self.music_on - 1)
+
+    def pause_play(self):
+        self.paused = abs(self.paused - 1)
 
     def to_main_menu(self):
         self.plaing_main_menu = True
@@ -91,14 +103,13 @@ class Runner:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         running = False
-                    if event.type == KEYDOWN:
+                    if event.type == KEYDOWN and not self.paused:
                         if self.playing:
                             if (event.key == K_UP or event.key == K_SPACE) and not self.main_hero.jumping\
                                     and self.main_hero.rect.top == self.main_hero.ct:
                                 self.main_hero.jumping = True
-                                if pygame.mixer.get_init():
-                                    pass
-                                    # jump_sound.play()
+                                if pygame.mixer.get_init() and self.music_on:
+                                    jump_sound.play()
                                 self.main_hero.state = JUMPING
                                 self.main_hero.start_jump(self.currentSpeed)
                                 # print("START")
@@ -107,21 +118,24 @@ class Runner:
                                 self.main_hero.state = DUCKING
                         else:
                             self.restart()
-                    if event.type == KEYUP:
-                        if self.playing:
+                    if event.type == KEYUP and not self.paused:
+                        if self.playing and not self.paused:
                             if self.main_hero.ducked:
                                 self.main_hero.ducked = False
                                 self.main_hero.rect.top = self.main_hero.ct
                                 self.main_hero.state = RUNNING
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         self.menu.update()
-                self.update()
+                        self.pause_play_btn.update()
+                if not self.paused:
+                    self.update()
                 # self.screen.fill((255, 255, 255, 255))
                 self.clear_canvas()
                 self.horizon.draw(self.screen)
                 self.main_hero.draw(self.screen)
                 self.distance_meter.draw(self.screen)
                 self.menu.display(self.screen)
+                self.pause_play_btn.display(self.screen)
                 pygame.display.flip()
                 self.clock.tick(FPS)
 
@@ -143,7 +157,8 @@ class Runner:
                     else:
                         self.main_hero.image = self.main_hero.frames[self.main_hero.states[CRASHED_R][frames][0]]
                     self.main_hero.crashed = True
-                    # crashed_sound.play()
+                    if self.music_on:
+                        crashed_sound.play()
                     self.currentSpeed = 0
                     self.playing = False
                     self.game_over = True
@@ -155,8 +170,8 @@ class Runner:
                 self.horizon.update(deltaTime, self.currentSpeed)
                 self.main_hero.update(deltaTime)
                 self.distance_meter.update(deltaTime, self.currentSpeed)
-                if self.distance_meter.play_achievement_sound:
-                    pass
+                if self.distance_meter.play_achievement_sound and self.music_on:
+                     pass
                     # achievement_sound.play()
 
     def restart(self):
@@ -166,6 +181,10 @@ class Runner:
         self.time = time()
         self.currentSpeed = SPEED
         self.screen.fill((255, 255, 255, 255))
+
+        self.paused = False
+        self.pause_play_btn.image = self.pause_play_btn.default_image
+        self.pause_play_btn.curr_index = 0
 
         # DeerHorizon contains clouds, obstacles and the ground.
         # self.horizon = DeerHorizon(self.screen)

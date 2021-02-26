@@ -10,7 +10,7 @@ FPS = 60
 width, height = 800, 400
 
 
-class MainHero:
+class MainCharacter:
     def __init__(self, x, y):
         self.frames = []
         self.states = {}
@@ -89,7 +89,7 @@ class MainHero:
         self.ducked = False
         self.crashed = False
         self.v0 = INITIAL_JUMP_VELOCITY
-        self.g = 0.6
+        self.g = GRAVITY
         self.iters = 0
         self.rect.top = self.ct
         self.timer = 0
@@ -98,11 +98,11 @@ class MainHero:
         self.speedDrop = False
 
 
-class TRex(MainHero):
+class TRex(MainCharacter):
     def __init__(self, x, y):
         super().__init__(x, y)
-        self.frames = load_sprite_sheet(load_image("dino_rd_3.png"), 5, 1) + \
-                      load_sprite_sheet(load_image("dino_d.png"), 2, 1) + [load_image("dino_dd.png")]
+        self.frames = load_sprite_sheet(load_image("heros/dino_rd_3.png"), 5, 1) + \
+                      load_sprite_sheet(load_image("heros/dino_d.png"), 2, 1) + [load_image("heros/dino_dd.png")]
         self.states = {
             1: {
                 0: [2, 3],
@@ -133,11 +133,11 @@ class TRex(MainHero):
         self.v0 -= 1
 
 
-class Deer(MainHero):
+class Deer(MainCharacter):
     def __init__(self, x, y):
         super().__init__(x, y)
         for i in range(5):
-            self.frames.append(load_image(f"deer0{i + 1}_no_black.png"))
+            self.frames.append(load_image(f"heros/deer0{i + 1}_no_black.png"))
         self.states = {
             1: {
                 0: [0, 1, 2, 3, 4],
