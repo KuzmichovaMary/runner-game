@@ -1,8 +1,10 @@
 # RunnerGame
-Game on pygame. Niether hard nor simple, but fun. My project for Yandex Liceum.
+Game on pygame. Niether hard nor simple, but fun. 
+
+My project for Yandex Liceum.
 
 ## How to use
-Simply download the zip archive and run Runner.py file
+Simply download the zip archive and run Runner.py file.
 
 
 ## Some screenshots
